@@ -1,58 +1,101 @@
+from typing import Dict, Any
+from utils.logger import log
+from dataclasses import dataclass
+import json
 
-
-# Rebind names
-LLMClient = globals()['LLMClient']
-ToolClient = globals()['ToolClient']
-BrandProfile = globals()['BrandProfile']
-make_id = globals()['make_id']
-logger = globals()['logger']
+from models.brand_profile import BrandProfile
+from models.research_output import ResearchOutput
+from utils.ids import make_id
 
 
 class BrandDesignAgent:
-    """Brand Design Agent: creates a brand profile, palette, tagline and simple logo concepts.
-
-    - Uses LLM for brand copy & dos/don'ts
-    - Uses ToolClient.generate_image to create logo concept images (optional)
+    """
+    Creates brand identity elements including:
+    - Mission statement
+    - Tone & brand guidelines
+    - Tagline
+    - Palette & Fonts
+    - Logo concepts (via ImageGeneratorTool)
     """
 
-    def __init__(self, llm: LLMClient, tools: ToolClient):
-        self.llm = llm
-        self.tools = tools
+    def __init__(self, llm, tools):
+        self.llm = llm            # GoogleLLMClient
+        self.tools = tools        # GoogleToolClient (contains .images)
 
     def run(self, brief: Dict[str, Any], research: ResearchOutput) -> BrandProfile:
-        company_name = brief.get("company_name") or brief.get("name") or "MyBrand"
-        logger.info("[BrandDesignAgent] designing brand for: %s", company_name)
 
-        prompt = (
-            f"You are a senior brand strategist. Using the research summary: {research.summary}\n\n"
-            f"Create a brand profile for the company named '{company_name}'. Provide:\n"
-            "1) 1-sentence mission\n2) Tone (3 words)\n3) 5 dos and 5 donts\n4) Tagline (1 line)\n5) Color palette (3 hex codes)\n6) Font suggestions (2)\nReturn JSON only."
+        company_name = (
+            brief.get("company_name")
+            or brief.get("name")
+            or brief.get("brand_name")
+            or "MyBrand"
         )
-        json_text = self.llm.generate(prompt, max_tokens=400)
-        # NOTE: production code should parse JSON safely. Here we create a simple profile.
 
-        # Simple heuristic parse: keep placeholders and use LLM text as mission
-        mission = json_text.splitlines()[0] if json_text else f"{company_name} mission"
+        log(f"[BrandDesignAgent] Designing brand identity for: {company_name}")
 
+        # LLM PROMPT
+        prompt = f"""
+        You are a senior brand strategist.
+
+        Based on this research:
+        {research.summary}
+
+        Create a brand identity for "{company_name}".
+
+        Return ONLY valid JSON:
+        {{
+            "mission": "...",
+            "tone": ["...", "...", "..."],
+            "dos": ["...", "..."],
+            "donts": ["...", "..."],
+            "tagline": "...",
+            "palette": ["#xxxxxx", "#xxxxxx", "#xxxxxx"],
+            "fonts": ["Font A", "Font B"]
+        }}
+        """
+
+        response_text = self.llm.run(prompt)
+
+        # SAFE JSON PARSE
+        try:
+            data = json.loads(response_text)
+        except Exception:
+            log("[BrandDesignAgent] WARNING: JSON parse failed. Using fallback defaults.")
+            data = {}
+
+        # CREATE BRAND PROFILE OBJECT
         profile = BrandProfile(
             id=make_id("brand"),
             name=company_name,
-            mission=mission,
-            tone=["friendly", "clear", "confident"],
-            dos=["be concise", "use active voice", "provide examples", "focus on benefits", "use brand words"],
-            donts=["use jargon", "be passive", "overpromise", "repeat", "use excessive adjectives"],
-            tagline=brief.get("short_tagline") or "Your story, better.",
-            palette=["#0f172a", "#06b6d4", "#f97316"],
-            fonts=["Inter", "Merriweather"],
-            logo_concepts=[{"id": make_id("logo"), "prompt": f"Logo idea for {company_name} - modern, minimal"}]
+            mission=data.get("mission", f"{company_name} creates meaningful impact."),
+            tone=data.get("tone", ["friendly", "clear", "confident"]),
+            dos=data.get("dos", ["be concise", "be helpful", "stay consistent"]),
+            donts=data.get("donts", ["avoid jargon", "avoid filler", "avoid ambiguity"]),
+            tagline=data.get("tagline", brief.get("tagline") or "Your story, better."),
+            palette=data.get("palette", ["#0F172A", "#06B6D4", "#F97316"]),
+            fonts=data.get("fonts", ["Inter", "Merriweather"]),
+            logo_concepts=[]
         )
 
-        # Optionally call image generator for each logo concept
-        for concept in profile.logo_concepts:
-            prompt_img = concept["prompt"]
-            imgs = self.tools.generate_image(prompt_img, n=2)
-            # store placeholders (actual bytes would be stored in asset store)
-            concept["images"] = ["<binary_image_placeholder>" for _ in imgs]
+        # LOGO CONCEPT GENERATION
+        base_prompt = f"Modern minimal vector logo for '{company_name}'"
 
-        logger.info("[BrandDesignAgent] created brand profile id=%s", profile.id)
+        for i in range(2):
+            concept_prompt = f"{base_prompt}, variation {i+1}"
+
+            log(f"[BrandDesignAgent] Generating image: {concept_prompt}")
+
+            try:
+                img_bytes = self.tools.images.generate(concept_prompt)
+            except Exception as e:
+                log(f"[BrandDesignAgent] ERROR generating image: {e}")
+                img_bytes = None
+
+            profile.logo_concepts.append({
+                "id": make_id("logo"),
+                "prompt": concept_prompt,
+                "image": img_bytes
+            })
+
+        log(f"[BrandDesignAgent] Completed profile: {profile.id}")
         return profile
