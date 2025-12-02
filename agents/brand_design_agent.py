@@ -1,12 +1,6 @@
 from typing import Dict, Any
-from utils.logger import log
-from dataclasses import dataclass
 import json
-
-from models.brand_profile import BrandProfile
-from models.research_output import ResearchOutput
-from utils.ids import make_id
-
+from agents.common import logger as log, BrandProfile, ResearchOutput, make_id
 
 class BrandDesignAgent:
     """
@@ -31,7 +25,7 @@ class BrandDesignAgent:
             or "MyBrand"
         )
 
-        log(f"[BrandDesignAgent] Designing brand identity for: {company_name}")
+        log.info(f"[BrandDesignAgent] Designing brand identity for: {company_name}")
 
         # LLM PROMPT
         prompt = f"""
@@ -54,13 +48,20 @@ class BrandDesignAgent:
         }}
         """
 
-        response_text = self.llm.run(prompt)
+        response_text = self.llm.generate(prompt)
 
         # SAFE JSON PARSE
         try:
+            # Clean up markdown code blocks if present
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+            
             data = json.loads(response_text)
         except Exception:
-            log("[BrandDesignAgent] WARNING: JSON parse failed. Using fallback defaults.")
+            log.warning("[BrandDesignAgent] WARNING: JSON parse failed. Using fallback defaults.")
             data = {}
 
         # CREATE BRAND PROFILE OBJECT
@@ -83,19 +84,20 @@ class BrandDesignAgent:
         for i in range(2):
             concept_prompt = f"{base_prompt}, variation {i+1}"
 
-            log(f"[BrandDesignAgent] Generating image: {concept_prompt}")
+            log.info(f"[BrandDesignAgent] Generating image: {concept_prompt}")
 
             try:
-                img_bytes = self.tools.images.generate(concept_prompt)
+                img_bytes = self.tools.generate_image(concept_prompt)
             except Exception as e:
-                log(f"[BrandDesignAgent] ERROR generating image: {e}")
+                log.error(f"[BrandDesignAgent] ERROR generating image: {e}")
                 img_bytes = None
 
+            # img_bytes is a list of bytes
             profile.logo_concepts.append({
                 "id": make_id("logo"),
                 "prompt": concept_prompt,
-                "image": img_bytes
+                "image": img_bytes[0] if img_bytes else None
             })
 
-        log(f"[BrandDesignAgent] Completed profile: {profile.id}")
+        log.info(f"[BrandDesignAgent] Completed profile: {profile.id}")
         return profile

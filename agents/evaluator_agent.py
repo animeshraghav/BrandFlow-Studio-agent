@@ -1,8 +1,10 @@
-Draft = globals()['Draft']
-BrandProfile = globals()['BrandProfile']
-EvaluationReport = globals()['EvaluationReport']
-logger = globals()['logger']
-
+from agents.common import Draft, BrandProfile, EvaluationReport, logger, LLMClient, ToolClient
+from agents.research_agent import ResearchAgent
+from agents.brand_design_agent import BrandDesignAgent
+from agents.draft_agent import DraftAgent
+from agents.editor_agent import EditorAgent
+from agents.seo_agent import SEOAgent
+from agents.visual_agent import VisualAgent
 
 class EvaluatorAgent:
     """Evaluator Agent: computes automated scores for readability, brand consistency and SEO.

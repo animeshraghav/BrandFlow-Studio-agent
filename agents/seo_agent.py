@@ -1,7 +1,5 @@
-LLMClient = globals()['LLMClient']
-SEOReport = globals()['SEOReport']
-logger = globals()['logger']
-
+from typing import List
+from agents.common import LLMClient, ToolClient, SEOReport, logger, Draft
 
 class SEOAgent:
     """SEO Agent: optimize titles, meta descriptions, headings and compute a simple SEO score.

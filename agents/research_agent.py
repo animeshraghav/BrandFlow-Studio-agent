@@ -1,15 +1,5 @@
-from dataclasses import asdict
-from typing import Iterable
-
-# local import for a single-file doc; in real repo use: from agents.common import LLMClient, ToolClient, ResearchOutput, CompetitorSummary, logger
-
-# Rebind names (for single-file readability)
-LLMClient = globals()['LLMClient']
-ToolClient = globals()['ToolClient']
-ResearchOutput = globals()['ResearchOutput']
-CompetitorSummary = globals()['CompetitorSummary']
-logger = globals()['logger']
-
+from typing import Dict, Any, List
+from agents.common import LLMClient, ToolClient, ResearchOutput, CompetitorSummary, logger
 
 class ResearchAgent:
     """Research Agent: gathers competitor context, keywords and topical references.

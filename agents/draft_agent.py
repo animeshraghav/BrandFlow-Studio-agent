@@ -1,8 +1,5 @@
-LLMClient = globals()['LLMClient']
-Draft = globals()['Draft']
-make_id = globals()['make_id']
-logger = globals()['logger']
-
+from typing import List, Dict, Any
+from agents.common import LLMClient, Draft, make_id, logger
 
 class DraftAgent:
     """Draft Agent: generates first-pass content drafts.

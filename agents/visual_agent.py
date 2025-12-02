@@ -1,7 +1,5 @@
-ToolClient = globals()['ToolClient']
-make_id = globals()['make_id']
-logger = globals()['logger']
-
+from typing import List, Dict, Any
+from agents.common import ToolClient, BrandProfile, make_id, logger
 
 class VisualAgent:
     """Visual Designer Agent: creates thumbnails, logo variants and social image assets.
@@ -18,10 +16,12 @@ class VisualAgent:
         for i in range(n_variants):
             prompt = f"Logo for {brand_profile.name} - {brand_profile.tagline} - style: {', '.join(brand_profile.tone)}"
             images = self.tools.generate_image(prompt, n=1)
-            out.append({"variant_id": make_id("logo"), "prompt": prompt, "images": ["<img_placeholder>"]})
+            # images is a list of bytes
+            out.append({"variant_id": make_id("logo"), "prompt": prompt, "images": images})
         return out
 
     def run_thumbnail(self, title: str, brand_profile: BrandProfile) -> Dict[str, Any]:
         prompt = f"Thumbnail for article '{title}' in brand style: {brand_profile.tone}. Use colors {brand_profile.palette}."
         imgs = self.tools.generate_image(prompt, n=1, size="1200x628")
-        return {"id": make_id("thumb"), "prompt": prompt, "image": "<img_placeholder>"}
+        # imgs is a list of bytes
+        return {"id": make_id("thumb"), "prompt": prompt, "image": imgs[0] if imgs else None}

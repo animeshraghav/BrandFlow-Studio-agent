@@ -1,8 +1,8 @@
-LLMClient = globals()['LLMClient']
-Draft = globals()['Draft']
-EvaluationReport = globals()['EvaluationReport']
-logger = globals()['logger']
+from agents.common import LLMClient, Draft, EvaluationReport, logger, BrandProfile
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from agents.evaluator_agent import EvaluatorAgent
 
 class EditorAgent:
     """Editor Agent: refines drafts to adhere to brand voice, readability and constraints.
