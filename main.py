@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from orchestrator.controller import BrandFlowController
 from tools.google_llm import GoogleLLMClient
 from tools.tool_client import GoogleToolClient

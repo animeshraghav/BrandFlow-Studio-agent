@@ -19,7 +19,13 @@ class GoogleSearchTool:
         genai.configure(api_key=api_key)
         self.model_name = model
         # Enable Google Search tool
-        self.tools = [{'google_search': {}}]
+        # self.tools = [{'google_search': {}}]
+        # Use explicit Tool object to avoid FunctionDeclaration error
+        self.tools = [
+            genai.protos.Tool(
+                google_search_retrieval=genai.protos.GoogleSearchRetrieval()
+            )
+        ]
         self.model = genai.GenerativeModel(model, tools=self.tools)
 
     def search(self, query: str, top_k: int = 5):
